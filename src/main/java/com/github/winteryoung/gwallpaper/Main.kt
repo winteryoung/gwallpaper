@@ -1,5 +1,8 @@
 package com.github.winteryoung.gwallpaper
 
+import com.github.kittinunf.fuel.httpGet
+import com.github.kittinunf.result.Result
+import com.github.winteryoung.gwallpaper.utils.*
 import com.github.winteryoung.gwallpaper.win32.User32
 import kotlinx.coroutines.experimental.runBlocking
 import org.apache.commons.lang3.RandomUtils
@@ -14,6 +17,7 @@ import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.net.URL
+import java.util.concurrent.TimeUnit
 import javax.imageio.ImageIO
 
 
@@ -23,6 +27,9 @@ import javax.imageio.ImageIO
  */
 object Main {
     private val log = LoggerFactory.getLogger(javaClass)
+
+    private val connectTimeout = TimeUnit.MILLISECONDS.convert(1, TimeUnit.SECONDS).toInt()
+    private val readTimeout = TimeUnit.MILLISECONDS.convert(10, TimeUnit.SECONDS).toInt()
 
     @JvmStatic
     fun main(args: Array<String>) = runBlocking {
@@ -51,11 +58,8 @@ object Main {
     private suspend fun crawlImage(webDriver: WebDriver): File {
         webDriver.get("http://image.google.com")
 
-        val input = webDriver.exec {
-            findElementByCss("#lst-ib")
-        }
-
-        val screenSize: ScreenSize = Toolkit.getDefaultToolkit().screenSize.run {
+        val input = webDriver.findElementByCss("#lst-ib")
+        val screenSize = Toolkit.getDefaultToolkit().screenSize.run {
             width to height
         }
         input.sendKeys("nature wallpapers ${screenSize.first}x${screenSize.second}")
@@ -67,20 +71,29 @@ object Main {
         return crawlImageInListPage(webDriver, maxLen, screenSize)
     }
 
-    private fun crawlImageInListPage(webDriver: WebDriver, maxLen: Int, screenSize: ScreenSize): File {
+    private suspend fun crawlImageInListPage(webDriver: WebDriver, maxLen: Int, screenSize: ScreenSize): File {
         val url = crawlImageUrlInListPage(webDriver, maxLen, screenSize, setOf())
         val fileExt = "." + url.substringAfterLast('.')
-        val bytes = timedSecs("read url bytes") {
-            URL(url).readBytes()
+        val bytes = timedSecs("read image bytes") {
+            val (_, _, result) = url.httpGet().timeout(connectTimeout).timeoutRead(readTimeout).response()
+            when (result) {
+                is Result.Success -> {
+                    result.get()
+                }
+                is Result.Failure -> {
+                    throw result.error
+                }
+            }
         }
-        val tempFile = File.createTempFile("gwallpaper-", fileExt)
-        tempFile.deleteOnExit()
-        tempFile.writeBytes(bytes)
-        log.warn("Image crawled and stored: $tempFile")
-        return tempFile
+
+        return File.createTempFile("gwallpaper-", fileExt).apply {
+            deleteOnExit()
+            writeBytes(bytes)
+            log.warn("Image crawled and stored: $this")
+        }
     }
 
-    private fun crawlImageUrlInListPage(
+    private suspend fun crawlImageUrlInListPage(
             webDriver: WebDriver,
             maxLen: Int,
             screenSize: ScreenSize,
@@ -92,6 +105,8 @@ object Main {
             return crawlImageUrlInListPage(webDriver, maxLen, screenSize, excludedIndexes)
         }
 
+        log.warn("Visit image ${imageIndex}")
+
         val img = webDriver.findElementByCss("#rg_s > div:nth-child($imageIndex) > a > img")
         img.click()
 
@@ -101,9 +116,12 @@ object Main {
 
         val size = timedSecs("test image size") {
             val istream = try {
-                URL(url).openStream()
+                URL(url).openConnection().apply {
+                    connectTimeout = this@Main.connectTimeout
+                    readTimeout = this@Main.readTimeout
+                }.getInputStream()
             } catch (e: IOException) {
-                log.warn("Cannot open url for stream: $url")
+                log.warn("Cannot open stream for url: $url")
                 return@timedSecs null
             }
             testImageSize(istream).apply {
@@ -138,7 +156,7 @@ object Main {
         return null
     }
 
-    private fun expandGallery(webDriver: WebDriver): Int {
+    private suspend fun expandGallery(webDriver: WebDriver): Int {
         var maxLen = 0
         var maxLenSet = DateTime.now()
 
@@ -151,7 +169,7 @@ object Main {
                 maxLenSet = DateTime.now()
             } else {
                 val elapsed = Duration(maxLenSet, DateTime.now())
-                if (elapsed.standardSeconds > 2) {
+                if (elapsed.millis > 1000) {
                     break
                 }
             }

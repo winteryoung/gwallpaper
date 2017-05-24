@@ -1,4 +1,4 @@
-package com.github.winteryoung.gwallpaper
+package com.github.winteryoung.gwallpaper.utils
 
 /**
  * @author Winter Young

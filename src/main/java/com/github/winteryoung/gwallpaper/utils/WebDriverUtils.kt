@@ -1,14 +1,12 @@
-package com.github.winteryoung.gwallpaper
+package com.github.winteryoung.gwallpaper.utils
 
-import com.gargoylesoftware.htmlunit.BrowserVersion
-import com.gargoylesoftware.htmlunit.WebClient
 import kotlinx.coroutines.experimental.delay
-import org.openqa.selenium.*
+import org.openqa.selenium.By
+import org.openqa.selenium.StaleElementReferenceException
+import org.openqa.selenium.WebDriver
+import org.openqa.selenium.WebElement
 import org.openqa.selenium.chrome.ChromeDriver
 import org.openqa.selenium.chrome.ChromeOptions
-import org.openqa.selenium.htmlunit.HtmlUnitDriver
-import org.openqa.selenium.remote.CapabilityType
-import org.openqa.selenium.remote.DesiredCapabilities
 import org.openqa.selenium.support.ui.ExpectedConditions
 import org.openqa.selenium.support.ui.WebDriverWait
 import org.slf4j.LoggerFactory
@@ -31,24 +29,6 @@ fun chromeDriver(): ChromeDriver {
     }
 }
 
-fun htmlUnitDriver(): HtmlUnitDriver {
-    return object : HtmlUnitDriver(DesiredCapabilities.htmlUnitWithJs().apply {
-        setCapability(CapabilityType.PROXY, Proxy().apply {
-            httpProxy = "localhost:7777"
-        })
-    }) {
-        override fun newWebClient(version: BrowserVersion?): WebClient {
-            val webClient = super.newWebClient(version)
-            webClient.options.isThrowExceptionOnScriptError = false
-            return webClient
-        }
-    }.apply {
-        manage().apply {
-            timeouts().implicitlyWait(40, TimeUnit.SECONDS)
-        }
-    }
-}
-
 suspend fun <T> WebDriver.exec(block: suspend WebDriver.() -> T): T {
     var ex: Exception? = null
     repeat(10) {
@@ -63,25 +43,29 @@ suspend fun <T> WebDriver.exec(block: suspend WebDriver.() -> T): T {
     throw Exception("Failed due to StaleElementReferenceException", ex)
 }
 
-fun WebDriver.findElementsByCss(
+suspend fun WebDriver.findElementsByCss(
         selector: String,
         timeOut: Long = 10,
         unit: TimeUnit = TimeUnit.SECONDS
 ): List<WebElement> {
-    val cssSelector = By.cssSelector(selector)
-    WebDriverWait(this, TimeUnit.SECONDS.convert(timeOut, unit))
-            .until(ExpectedConditions.visibilityOfElementLocated(cssSelector))
-    return findElements(cssSelector)
+    return exec {
+        val cssSelector = By.cssSelector(selector)
+        WebDriverWait(this, TimeUnit.SECONDS.convert(timeOut, unit))
+                .until(ExpectedConditions.visibilityOfElementLocated(cssSelector))
+        return@exec findElements(cssSelector)
+    }
 }
 
-fun WebDriver.findElementByCss(
+suspend fun WebDriver.findElementByCss(
         selector: String,
         timeOut: Long = 10,
         unit: TimeUnit = TimeUnit.SECONDS,
         resultSelector: (List<WebElement>) -> WebElement = List<WebElement>::last
 ): WebElement {
-    val results = findElementsByCss(selector, timeOut, unit)
-    return resultSelector(results)
+    return exec {
+        val results = findElementsByCss(selector, timeOut, unit)
+        return@exec resultSelector(results)
+    }
 }
 
 suspend fun <T> WebDriver.use(logError: Boolean = false, block: suspend (WebDriver) -> T): T {
