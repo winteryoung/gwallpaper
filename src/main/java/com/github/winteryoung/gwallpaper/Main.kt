@@ -15,6 +15,7 @@ import java.awt.Toolkit
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
+import java.net.URL
 import java.util.concurrent.TimeUnit
 import javax.imageio.ImageIO
 
@@ -92,7 +93,7 @@ object Main {
             return crawlImageUrlInListPage(webDriver, maxLen, screenSize, excludedIndexes)
         }
 
-        log.warn("Visit image ${imageIndex}")
+        log.warn("Visit image $imageIndex")
 
         val img = webDriver.findElementByCss("#rg_s > div:nth-child($imageIndex) > a > img")
         img.click()
@@ -134,12 +135,10 @@ object Main {
     private fun testImageSize(url: String): Pair<Int, Int>? {
         val inputStream = timedSecs("test image size") {
             try {
-                Request.Get(url)
-                        .connectTimeout(connectTimeout)
-                        .socketTimeout(readTimeout)
-                        .execute()
-                        .returnContent()
-                        .asStream()
+                URL(url).openConnection().apply {
+                    connectTimeout = this@Main.connectTimeout
+                    readTimeout = this@Main.readTimeout
+                }.getInputStream()
             } catch (e: IOException) {
                 log.warn("Cannot open stream for url: $url, reason: ${e.message}")
                 return@timedSecs null
