@@ -138,7 +138,7 @@ object Main {
                 URL(url).openConnection().apply {
                     connectTimeout = this@Main.connectTimeout
                     readTimeout = this@Main.readTimeout
-                }.getInputStream()
+                }.getInputStream().buffered(128)
             } catch (e: IOException) {
                 log.warn("Cannot open stream for url: $url, reason: ${e.message}")
                 return@timedSecs null
