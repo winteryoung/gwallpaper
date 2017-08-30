@@ -16,7 +16,7 @@ fun <T> timedSecs(msg: String, block: () -> T): T {
         return block()
     } finally {
         val duration = org.joda.time.Duration(start, DateTime.now())
-        log.warn("$msg: ${duration.standardSeconds} seconds")
+        log.info("$msg: ${duration.standardSeconds} seconds")
     }
 }
 
