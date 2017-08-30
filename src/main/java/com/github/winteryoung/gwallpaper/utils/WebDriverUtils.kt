@@ -18,7 +18,11 @@ fun chromeDriver(proxy: String? = null): ChromeDriver {
     System.setProperty("webdriver.chrome.silentOutput", "true")
     return ChromeDriver(DesiredCapabilities.chrome().apply {
         if (proxy != null) {
-            setCapability("proxy", Proxy().setHttpProxy(proxy))
+            setCapability("proxy", Proxy().apply {
+                httpProxy = proxy
+                noProxy = ""
+                proxyType = Proxy.ProxyType.MANUAL
+            })
         }
         setCapability(ChromeOptions.CAPABILITY, ChromeOptions().apply {
             addArguments("--headless")

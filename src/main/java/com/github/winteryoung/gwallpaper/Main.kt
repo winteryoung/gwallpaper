@@ -55,7 +55,7 @@ object Main {
     }
 
     private fun crawlImage(): File {
-        return chromeDriver("localhost:7778").use { crawlImage(it) }
+        return chromeDriver("127.0.0.1:7778").use { crawlImage(it) }
     }
 
     private fun crawlImage(webDriver: WebDriver): File {
@@ -65,6 +65,8 @@ object Main {
             Toolkit.getDefaultToolkit().screenSize.run {
                 width to height
             }.let { screenSize ->
+                log.info("Search")
+
                 input.sendKeys("nature wallpapers ${screenSize.first}x${screenSize.second}")
                 input.sendKeys(Keys.ENTER)
 
