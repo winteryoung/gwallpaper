@@ -19,3 +19,26 @@ fun <T> timedSecs(msg: String, block: () -> T): T {
         log.warn("$msg: ${duration.standardSeconds} seconds")
     }
 }
+
+data class Stoppable<out Element> constructor(val _continue: Boolean, val element: Element?) {
+    companion object {
+        fun <Element> _continue(element: Element) = Stoppable(true, element)
+        fun _break() = Stoppable(false, null)
+    }
+}
+
+fun <Accumulator, Element> Sequence<Element>.stoppableFold(
+        initValue: Accumulator?,
+        operation: (Accumulator?, Element) -> Stoppable<Accumulator?>
+): Accumulator? {
+    var lastValue = initValue
+    for (element in this) {
+        val (_continue, acc) = operation(lastValue, element)
+        if (_continue) {
+            lastValue = acc
+        } else {
+            break
+        }
+    }
+    return lastValue
+}

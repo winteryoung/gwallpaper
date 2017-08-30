@@ -9,7 +9,7 @@
     <logger name="com.gargoylesoftware.htmlunit" additivity="false" level="off"/>
     <logger name="org.apache.http.client" additivity="false" level="off"/>
 
-    <root level="warn">
+    <root level="info">
         <appender-ref ref="stdout"/>
     </root>
 </configuration>
