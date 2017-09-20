@@ -4,6 +4,7 @@ import org.openqa.selenium.Proxy
 import org.openqa.selenium.WebDriver
 import org.openqa.selenium.chrome.ChromeDriver
 import org.openqa.selenium.chrome.ChromeOptions
+import org.openqa.selenium.remote.CapabilityType
 import org.openqa.selenium.remote.DesiredCapabilities
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
@@ -18,10 +19,11 @@ fun chromeDriver(proxy: String? = null): ChromeDriver {
     System.setProperty("webdriver.chrome.silentOutput", "true")
     return ChromeDriver(DesiredCapabilities.chrome().apply {
         if (proxy != null) {
-            setCapability("proxy", Proxy().apply {
+            setCapability(CapabilityType.PROXY, Proxy().apply {
                 httpProxy = proxy
-                noProxy = ""
+                sslProxy = proxy
                 proxyType = Proxy.ProxyType.MANUAL
+                isAutodetect = false
             })
         }
         setCapability(ChromeOptions.CAPABILITY, ChromeOptions().apply {

@@ -19,7 +19,6 @@ import java.net.URL
 import java.util.concurrent.TimeUnit
 import javax.imageio.ImageIO
 
-
 /**
  * @author Winter Young
  * @since 2017/5/23
@@ -59,7 +58,7 @@ object Main {
     }
 
     private fun crawlImage(webDriver: WebDriver): File {
-        webDriver.get("http://image.google.com")
+        webDriver.get("https://images.google.com")
 
         webDriver.findElement(By.cssSelector("#lst-ib")).let { input ->
             Toolkit.getDefaultToolkit().screenSize.run {
@@ -168,7 +167,7 @@ object Main {
                         .execute()
                         .returnContent()
                         .asBytes()
-            } catch(e: IOException) {
+            } catch (e: IOException) {
                 log.info("Error read url: $url, reason: ${e.message}")
                 return@timedSecs null
             }
